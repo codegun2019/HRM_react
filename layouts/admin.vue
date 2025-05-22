@@ -125,8 +125,8 @@
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-auto bg-gray-100">
-        <div class="container mx-auto px-4 py-6">
+      <main class="flex-1 min-h-0 overflow-y-auto bg-gray-100">
+        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <slot />
         </div>
       </main>

@@ -3,15 +3,16 @@
     <div class="w-full max-w-md">
       <div class="text-center mb-6">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
+          <ShieldCheckIcon class="h-8 w-8" />
         </div>
         <h1 class="text-2xl font-bold">AdminPanel</h1>
         <p class="text-gray-500">Secure admin dashboard</p>
       </div>
 
-      <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
+      <div v-if="initialLoading">
+        <LoginSkeleton />
+      </div>
+      <div v-else class="bg-white rounded-lg shadow-md border border-gray-100 p-6">
         <h2 class="text-xl font-bold mb-1">Login</h2>
         <p class="text-gray-500 text-sm mb-6">Enter your credentials to access your account</p>
         
@@ -42,7 +43,8 @@
                 @click="showPassword = !showPassword" 
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400"
               >
-              <EyeSlashIcon class="w-4 h-4 text-back text-xs" />
+                <EyeIcon v-if="showPassword" class="h-5 w-5" />
+                <EyeSlashIcon v-else class="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -52,7 +54,13 @@
             class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             :disabled="loading"
           >
-            <span v-if="loading">Logging in...</span>
+            <span v-if="loading" class="flex items-center justify-center">
+              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Logging in...
+            </span>
             <span v-else>Login</span>
           </button>
         </form>
@@ -65,7 +73,8 @@
           </div>
         </div>
         
-        <div v-if="error" class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+        <div v-if="error" class="mt-4 p-3 bg-red-50 text-red-700 rounded-md text-sm flex items-center">
+          <ExclamationCircleIcon class="h-5 w-5 mr-2 text-red-500" />
           {{ error }}
         </div>
       </div>
@@ -74,17 +83,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
-import { EyeSlashIcon } from '@heroicons/vue/24/solid'
+import { 
+  ShieldCheckIcon, 
+  EyeIcon, 
+  EyeSlashIcon,
+  ExclamationCircleIcon
+} from '@heroicons/vue/24/outline'
+import { definePageMeta } from '#imports'
+import LoginSkeleton from '~/components/LoginSkeleton.vue'
+
 const username = ref('admin')
 const password = ref('123456')
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
+const initialLoading = ref(true)
 
 const { login } = useAuth()
 
+
+onMounted(async () => {
+  // Simulate initial loading
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  initialLoading.value = false
+})
 
 const handleLogin = async () => {
   loading.value = true
