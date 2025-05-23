@@ -12,6 +12,7 @@
               <p class="text-gray-500 text-sm">Total Users</p>
               <p class="text-2xl font-bold">{{ stats.totalUsers }}</p>
               <p class="text-green-500 text-xs">+5% from last month</p>
+              
             </div>
             <div class="bg-blue-100 p-2 rounded-lg">
               <UsersIcon class="h-6 w-6 text-blue-600" />
@@ -110,74 +111,89 @@
     </div>
   </div>
 </template>
-
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
-import { 
-  UsersIcon, 
-  ShieldCheckIcon, 
-  UserCircleIcon, 
-  ClockIcon 
+import {
+  UsersIcon,
+  ShieldCheckIcon,
+  UserCircleIcon,
+  ClockIcon
 } from '@heroicons/vue/24/outline'
-import { useRoute } from 'vue-router';
 
-const route = useRoute();
+import { useRuntimeConfig, useCookie } from '#imports'
 
 const { getCurrentUser } = useAuth()
 const user = ref(null)
-const loading = ref(true)
-const error = ref(null)
-
+const dashboardMessage = ref('')
 const stats = ref({
   totalUsers: 0,
   totalRoles: 0,
   activeUsers: 0,
   recentLogins: 0
 })
-
 const recentUsers = ref([])
+
+const loading = ref(true)
+const error = ref<string | null>(null)
 
 definePageMeta({
   middleware: 'auth',
   layout: 'dashboard'
 })
 
-onMounted(async () => {
+const fetchDashboardData = async () => {
+  const config = useRuntimeConfig()
+  const token = useCookie<string | null>('auth_token')
+
+  if (!token.value) {
+    error.value = 'Missing token'
+    loading.value = false
+    return
+  }
+
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    user.value = await getCurrentUser()
-    
-    // Mock data
+    console.log('✅ Sending token:', token.value)
+
+    const [me, dashboard] = await Promise.all([
+      $fetch(`${config.public.apiBase}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token.value}`
+        }
+      }),
+      $fetch(`${config.public.apiBase}/dashboard`, {
+        headers: {
+          Authorization: `Bearer ${token.value}`
+        }
+      })
+    ])
+
+    user.value = me
+    dashboardMessage.value = dashboard.message
+
     stats.value = {
       totalUsers: 10,
       totalRoles: 5,
       activeUsers: 8,
       recentLogins: 3
     }
-    
+
     recentUsers.value = [
       {
-        username: 'admin',
-        email: 'admin@example.com',
-        role: 'Administrator',
+        username: me.username,
+        email: `${me.username}@example.com`,
+        role: me.role,
         status: 'Active',
-        lastLogin: 'May 22, 2025, 11:27 PM'
-      },
-      {
-        username: 'manager',
-        email: 'manager@example.com',
-        role: 'Manager',
-        status: 'Active',
-        lastLogin: 'May 22, 2025, 10:15 AM'
+        lastLogin: new Date().toLocaleString()
       }
     ]
-  } catch (err) {
-    error.value = err.message || 'Failed to load dashboard data'
+  } catch (err: any) {
+    console.error('❌ Dashboard error:', err)
+    error.value = err?.data?.message || err?.message || 'Failed to load dashboard'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(fetchDashboardData)
 </script>

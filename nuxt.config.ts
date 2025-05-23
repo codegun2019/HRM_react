@@ -1,4 +1,8 @@
 export default defineNuxtConfig({
+  // ✅ เปิดใช้งานโมดูลที่จำเป็น
+  modules: [
+    '@pinia/nuxt',
+  ],
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE,
