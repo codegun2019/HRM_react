@@ -95,8 +95,20 @@
     </div>
 
     <!-- User Form Modal (Add/Edit) -->
+
     <UserFormModal 
       v-if="showUserFormModal" 
+      :key="selectedUser?.id || 'new'"  
+      :user="selectedUser" 
+      :is-edit="isEditMode" 
+      @close="closeUserFormModal" 
+      @save="saveUser" 
+    />
+
+    <!-- ✅ AFTER -->
+    <UserFormModal 
+      v-if="showUserFormModal" 
+      :key="modalKey"  
       :user="selectedUser" 
       :is-edit="isEditMode" 
       @close="closeUserFormModal" 
@@ -124,11 +136,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'
-import { 
-  PlusIcon, 
-  MagnifyingGlassIcon, 
-  PencilIcon, 
-  TrashIcon 
+import {
+  PlusIcon,
+  MagnifyingGlassIcon,
+  PencilIcon,
+  TrashIcon
 } from '@heroicons/vue/24/outline'
 import UserFormModal from '~/components/users/UserFormModal.vue'
 import DeleteUserModal from '~/components/users/DeleteUserModal.vue'
@@ -144,12 +156,40 @@ const userStore = useUserStore()
 const loading = ref(true)
 const error = ref(null)
 const searchQuery = ref('')
-
 // Modal states
 const showUserFormModal = ref(false)
 const showDeleteUserModal = ref(false)
 const selectedUser = ref(null)
 const isEditMode = ref(false)
+const roleNameToIdMap = {
+  Administrator: 1,
+  HR: 2,
+  Employee: 3,
+}
+const openEditUserModal = (user) => {
+  selectedUser.value = {} // ✅ reset ก่อน
+  const roleId =
+    user.role_id ??
+    (typeof user.role === 'object'
+      ? roleNameToIdMap[user.role.name]
+      : roleNameToIdMap[user.role]) ?? 3
+
+  selectedUser.value = {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role_id: roleId,
+    status: user.status,
+    password: ''
+  }
+
+  isEditMode.value = true
+  showUserFormModal.value = true
+}
+
+
+// Reverse map for create modal default role
+const defaultRoleId = roleNameToIdMap['Employee']
 
 const toast = ref({
   show: false,
@@ -172,11 +212,11 @@ onMounted(async () => {
 // Computed property for filtered users
 const filteredUsers = computed(() => {
   if (!searchQuery.value) return userStore.users
-  
+
   const query = searchQuery.value.toLowerCase()
-  return userStore.users.filter(user => 
-    user.username.toLowerCase().includes(query) || 
-    user.email.toLowerCase().includes(query) || 
+  return userStore.users.filter(user =>
+    user.username.toLowerCase().includes(query) ||
+    user.email.toLowerCase().includes(query) ||
     user.role.toLowerCase().includes(query)
   )
 })
@@ -186,17 +226,11 @@ const openAddUserModal = () => {
   selectedUser.value = {
     username: '',
     email: '',
-    role: 'Employee',
+    role_id: defaultRoleId,
     status: 'Active',
     password: ''
   }
   isEditMode.value = false
-  showUserFormModal.value = true
-}
-
-const openEditUserModal = (user) => {
-  selectedUser.value = { ...user }
-  isEditMode.value = true
   showUserFormModal.value = true
 }
 
@@ -218,13 +252,23 @@ const closeDeleteUserModal = () => {
 // CRUD operations
 const saveUser = async (userData) => {
   try {
+    const payload = {
+      id: userData.id,
+      username: userData.username,
+      email: userData.email,
+      password: userData.password,
+      is_active: userData.status === 'Active',
+      role_id: userData.role_id,
+    }
+
     if (isEditMode.value) {
-      await userStore.updateUser(userData)
+      await userStore.updateUser(payload)
       showToast('success', 'User Updated', `User ${userData.username} has been updated successfully.`)
     } else {
-      await userStore.createUser(userData)
+      await userStore.createUser(payload)
       showToast('success', 'User Created', `User ${userData.username} has been created successfully.`)
     }
+
     closeUserFormModal()
   } catch (err) {
     error.value = err.message

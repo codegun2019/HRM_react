@@ -13,7 +13,10 @@
           <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mr-2">
             <ShieldCheckIcon class="h-5 w-5" />
           </div>
-          <span class="font-bold text-lg">AdminPanel</span>
+          
+            <span v-if="loading">กำลังโหลด...</span>
+            <span v-else-if="error" class="text-red-500 font-bold text-lg">{{ error }}</span>
+            <span v-else class="mt-4 text-gray-700 text-lg font-bold text-lg">{{ message }}</span>
         </div>
       </div>
     </div>
@@ -78,7 +81,10 @@
             </button>
             <div class="relative" ref="desktopUserMenuRef">
               <button @click="desktopUserMenuOpen = !desktopUserMenuOpen" class="flex items-center">
-                <span class="mr-1">{{ user?.username || 'Admin User' }}</span>
+                <!-- <span class="mr-1">{{ user?.username || 'Admin User' }}</span> -->
+                  <span v-if="loading">กำลังโหลด...</span>
+                  <span v-else-if="error" class="mr-1">{{ error }}</span>
+                  <span v-else class="mr-1">{{ user?.username || message }}</span>
                 <ChevronDownIcon class="h-5 w-5" />
               </button>
               <div v-if="desktopUserMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
@@ -166,10 +172,22 @@ const handleClickOutside = (event) => {
     desktopUserMenuOpen.value = false
   }
 }
+const {
+  loading: authLoading,
+  error: authError
+} = useAuth()
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+
   fetchDashboardMessage()
+
+  // ✅ แสดง toast ครั้งเดียวหลัง login
+  if (sessionStorage.getItem('toastShown') !== 'true') {
+    showToast.value = true
+    sessionStorage.setItem('toastShown', 'true')
+  }
+
   setTimeout(() => {
     showToast.value = false
   }, 5000)

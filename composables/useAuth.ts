@@ -97,14 +97,15 @@ export function useAuth() {
     }
   }
 
-  // ดึงข้อมูลผู้ใช้ปัจจุบันจาก token
   const getCurrentUser = async () => {
     if (!token.value) {
       logout()
       return null
     }
+  
     try {
       const userData = await fetcher('/auth/me')
+  
       user.value = {
         id: userData.id,
         username: userData.username,
@@ -113,12 +114,21 @@ export function useAuth() {
         isActive: userData.is_active,
         createdAt: userData.created_at
       }
+  
       return user.value
-    } catch (err) {
+    } catch (err: any) {
+      const status = err?.response?.status || err?.status
+  
+      if (status === 401) {
+        // ✅ หากไม่ได้รับอนุญาตให้ดีดออกจากระบบ
+        logout()
+      }
+  
       console.error('❌ ไม่สามารถดึงข้อมูลผู้ใช้:', err)
       return null
     }
   }
+  
 
   // ออกจากระบบ
   const logout = () => {

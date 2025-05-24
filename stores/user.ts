@@ -1,150 +1,131 @@
-import { defineStore } from "pinia"
-import { useNuxtApp } from "#app"
+// 📄 File: stores/user.ts
 
-export const useUserStore = defineStore("user", {
+import { defineStore } from 'pinia'
+import { useRuntimeConfig, useCookie } from '#imports'
+
+export const useUserStore = defineStore('user', {
   state: () => ({
-    users: [],
+    users: [] as any[],
     loading: false,
     error: null,
   }),
 
   actions: {
     async fetchUsers() {
-      this.loading = true
-      this.error = null
-      const { $axios } = useNuxtApp()
+      const config = useRuntimeConfig()
+      const token = useCookie('auth_token')
 
       try {
-        // In a real app, this would be an API call
-        // For demo purposes, we'll simulate a delay and return mock data
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        const response = await $fetch(`${config.public.apiBase}/users`, {
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+        })
 
-        // Mock data
-        this.users = [
-          {
-            id: 1,
-            username: "admin",
-            email: "admin@example.com",
-            role: "Administrator",
-            status: "Active",
-            lastLogin: "May 22, 2025, 11:27 PM",
-          },
-          {
-            id: 2,
-            username: "manager",
-            email: "manager@example.com",
-            role: "Manager",
-            status: "Active",
-            lastLogin: "May 22, 2025, 10:15 AM",
-          },
-          {
-            id: 3,
-            username: "employee1",
-            email: "employee1@example.com",
-            role: "Employee",
-            status: "Active",
-            lastLogin: "May 21, 2025, 09:30 AM",
-          },
-          {
-            id: 4,
-            username: "employee2",
-            email: "employee2@example.com",
-            role: "Employee",
-            status: "Inactive",
-            lastLogin: "May 15, 2025, 02:45 PM",
-          },
-        ]
-      } catch (error) {
-        this.error = error.message || "Failed to fetch users"
-        throw error
-      } finally {
-        this.loading = false
+        this.users = response.map((user: any) => ({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role_id: user.role?.id ?? null,
+          role: user.role?.name || '—',
+          status: user.is_active ? 'Active' : 'Inactive',
+          lastLogin: user.last_login
+            ? new Date(user.last_login).toLocaleString()
+            : '—',
+        }))
+      } catch (error: any) {
+        throw new Error(error?.data?.message || 'Failed to fetch users')
       }
     },
 
-    async createUser(userData) {
-      this.loading = true
-      this.error = null
-      const { $axios } = useNuxtApp()
+    async createUser(userData: any) {
+      const config = useRuntimeConfig()
+      const token = useCookie('auth_token')
 
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800))
+        const response = await $fetch(`${config.public.apiBase}/users`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+          body: userData,
+        })
 
-        // Generate a new ID (in a real app, the server would do this)
-        const newId = Math.max(0, ...this.users.map((u) => u.id)) + 1
+        this.users.push({
+          id: response.id,
+          username: response.username,
+          email: response.email,
+          role_id: response.role?.id ?? null,
+          role: response.role?.name || '—',
+          status: response.is_active ? 'Active' : 'Inactive',
+          lastLogin: response.last_login
+            ? new Date(response.last_login).toLocaleString()
+            : '—',
+        })
 
-        // Create new user with current timestamp
-        const newUser = {
-          id: newId,
-          username: userData.username,
-          email: userData.email,
-          role: userData.role,
-          status: userData.status,
-          lastLogin: "Never",
-        }
-
-        // Add to users array
-        this.users.push(newUser)
-
-        return newUser
-      } catch (error) {
-        this.error = error.message || "Failed to create user"
+        return response
+      } catch (error: any) {
+        this.error = error?.data?.message || 'Failed to create user'
         throw error
-      } finally {
-        this.loading = false
       }
     },
 
-    async updateUser(userData) {
-      this.loading = true
-      this.error = null
-      const { $axios } = useNuxtApp()
+    async updateUser(userData: any) {
+      const config = useRuntimeConfig()
+      const token = useCookie('auth_token')
 
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800))
+        const response = await $fetch(`${config.public.apiBase}/users/${userData.id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+          body: {
+            username: userData.username,
+            email: userData.email,
+            password: userData.password || undefined,
+            role_id: userData.role_id,
+            is_active: userData.is_active,
+          },
+        })
 
-        // Find and update user
-        const index = this.users.findIndex((u) => u.id === userData.id)
+        const index = this.users.findIndex(u => u.id === response.id)
         if (index !== -1) {
-          this.users[index] = { ...this.users[index], ...userData }
-        } else {
-          throw new Error("User not found")
+          this.users[index] = {
+            id: response.id,
+            username: response.username,
+            email: response.email,
+            role_id: response.role?.id ?? null,
+            role: response.role?.name || '—',
+            status: response.is_active ? 'Active' : 'Inactive',
+            lastLogin: response.last_login
+              ? new Date(response.last_login).toLocaleString()
+              : '—',
+          }
         }
 
-        return this.users[index]
-      } catch (error) {
-        this.error = error.message || "Failed to update user"
-        throw error
-      } finally {
-        this.loading = false
+        return response
+      } catch (error: any) {
+        throw new Error(error?.data?.message || 'Failed to update user')
       }
     },
 
-    async deleteUser(userId) {
-      this.loading = true
-      this.error = null
-      const { $axios } = useNuxtApp()
+    async deleteUser(userId: number) {
+      const config = useRuntimeConfig()
+      const token = useCookie('auth_token')
 
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 800))
+        await $fetch(`${config.public.apiBase}/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token.value}`,
+          },
+        })
 
-        // Remove user from array
-        const index = this.users.findIndex((u) => u.id === userId)
-        if (index !== -1) {
-          this.users.splice(index, 1)
-        } else {
-          throw new Error("User not found")
-        }
-
-        return true
-      } catch (error) {
-        this.error = error.message || "Failed to delete user"
+        this.users = this.users.filter(u => u.id !== userId)
+      } catch (error: any) {
+        this.error = error?.data?.message || 'Failed to delete user'
         throw error
-      } finally {
-        this.loading = false
       }
     },
   },
